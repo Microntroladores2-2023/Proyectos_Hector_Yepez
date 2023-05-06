@@ -10,11 +10,13 @@
 static QueueHandle_t uart0_queue;
 
 #define tamBUFFER 1024
-#define led1 22
-#define led2 18
-#define led3 4
+#define led1 22 // salida GPIO22
+#define led2 18 // salida GPIO18
+#define led3 4  // salida GPIO4
 
 static const char *tag = "uart0";
+
+//********Tarea Eventos UART0**********
 
 void TareaEventosUART0(void *Parametro)
 {
@@ -23,18 +25,22 @@ void TareaEventosUART0(void *Parametro)
     uint8_t *datoRX = (uint8_t *)malloc(tamBUFFER);
     while (1)
     {
-        if (xQueueReceive(uart0_queue, (void *)&evento, (TickType_t)portMAX_DELAY))
+        if (xQueueReceive(uart0_queue, (void *)&evento, (TickType_t)portMAX_DELAY)) // Pregunto si se recibió algun dato por uart
         {
             bzero(datoRX, tamBUFFER);
             switch (evento.type)
             {
             case UART_DATA:
 
-                uart_read_bytes(UART_NUM_0, datoRX, evento.size, pdMS_TO_TICKS(100));
-                uart_write_bytes(UART_NUM_0, (const char *)datoRX, evento.size);
+                // Función Eco
+
+                uart_read_bytes(UART_NUM_0, datoRX, evento.size, pdMS_TO_TICKS(100)); // leo lo que recibio el uart
+                uart_write_bytes(UART_NUM_0, (const char *)datoRX, evento.size);      // envío lo mismo que recibió
                 uart_flush(UART_NUM_0);
 
                 ESP_LOGI(tag, "Data recibida: %s", datoRX);
+
+                // Funcion para encender los leds
 
                 for (size_t i = 0; i < evento.size - 2; i++)
                 {
@@ -42,25 +48,26 @@ void TareaEventosUART0(void *Parametro)
 
                     switch (value)
                     {
-
+                        // si el dato que recibe es "1" enciende led 1 apaga los demás
                     case '1':
                         gpio_set_level(led1, 1);
                         gpio_set_level(led2, 0);
                         gpio_set_level(led3, 0);
                         break;
-
+                        // si el dato que recibe es "2" enciende led 2 apaga los demás
                     case '2':
                         gpio_set_level(led1, 0);
                         gpio_set_level(led2, 1);
                         gpio_set_level(led3, 0);
                         break;
-
+                        // si el dato que recibe es "3" enciende led 3 apaga los demás
                     case '3':
 
                         gpio_set_level(led1, 0);
                         gpio_set_level(led2, 0);
                         gpio_set_level(led3, 1);
                         break;
+                        // si no es ninguno de los anteriores apaga los leds
 
                     default:
 
@@ -81,6 +88,8 @@ void TareaEventosUART0(void *Parametro)
     }
 }
 
+//*************Inicializo puertos UART******************
+
 void init_uart0()
 {
     uart_config_t configUART0 = {
@@ -99,6 +108,8 @@ void init_uart0()
 
     ESP_LOGI(tag, "uart0 inicializado");
 }
+
+//*************Inicializo puertos de salida****************
 
 static void init_led()
 {
