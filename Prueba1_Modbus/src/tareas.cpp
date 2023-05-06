@@ -20,6 +20,7 @@ void TareaEntradaDatos(void *Parametro)
         MBInputRegister[2].Val = datoInAux3++;
         MBInputRegister[3].Val = datoInAux4++;
 
+
         if (cont1++ == 50)
         {
             datoInAux1 = -100;

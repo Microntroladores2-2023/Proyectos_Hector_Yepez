@@ -48,7 +48,7 @@ void initUART0()
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         //.source_clk = UART_SCLK_DEFAULT,
     };
-    configUART0.baud_rate=9600;
+    //configUART0.baud_rate=9600;
     
     uart_param_config(UART_NUM_0, &configUART0);
     uart_set_pin(UART_NUM_0, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
