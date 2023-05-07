@@ -7,7 +7,7 @@ void setup()
 {
   initUART0();
   init_adc();
-  xTaskCreatePinnedToCore(TareaEntradaDatos, "Tarea_para_entrada1", 1024 * 2, NULL, 12, NULL, 1);
+  xTaskCreatePinnedToCore(TareaEntradaDatos, "Tarea_para_entrada1", 1024 * 5, NULL, 12, NULL, 1);
 }
 
 void loop()
