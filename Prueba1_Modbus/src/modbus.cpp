@@ -1,4 +1,5 @@
 #include "modbus.h"
+#include "coils.h"
 
 // uint8_t ByteArray[260]; // buffer de recepcion de los datos recibidos de los clientes
 UINT16_VAL MBHoldingRegister[maxHoldingRegister];
@@ -95,6 +96,71 @@ void modbusSerial(uint8_t *ByteArray, uint16_t Length)
             break;
 
         case MB_FC_WRITE_COIL: // 05 Write COIL
+            uart_write_bytes(UART_NUM_0, (const char *)ByteArray, 8);
+
+            // direccion de coil
+
+            Start.byte.HB = ByteArray[2];
+            Start.byte.LB = ByteArray[3];
+
+            // Comando encender o apagar Coil
+
+            WordDataLength.byte.HB = ByteArray[4];
+            WordDataLength.byte.LB = ByteArray[5];
+
+            // comprueba una dirección entre 0 y 15
+
+            switch (Start.Val)
+            {
+                // Dirección coil 0
+            case 0:
+                // Comprueba si comando es ON
+                if (WordDataLength.Val == 0xFF00)
+                {
+                    gpio_set_level(C0, 1);
+                    MBCoils.bits.b0 = 1;
+                }
+                // Si no comando OFF
+                else
+                {
+                    gpio_set_level(C0, 0);
+                    MBCoils.bits.b0 = 0;
+                }
+                break;
+
+                // Dirección coil 0
+
+            case 1:
+                if (WordDataLength.Val == 0xFF00)
+                {
+                    gpio_set_level(C1, 1);
+                    MBCoils.bits.b1 = 1;
+                }
+                else
+                {
+                    gpio_set_level(C1, 0);
+                    MBCoils.bits.b1 = 0;
+                }
+                break;
+
+                // Dirección coil 2
+
+            case 2:
+                if (WordDataLength.Val == 0xFF00)
+                {
+                    gpio_set_level(C2, 1);
+                    MBCoils.bits.b2 = 1;
+                }
+                else
+                {
+                    gpio_set_level(C2, 0);
+                    MBCoils.bits.b2 = 0;
+                }
+                break;
+
+            default:
+                break;
+            }
 
             break;
 
