@@ -5,12 +5,14 @@ extern UINT16_VAL MBHoldingRegister[maxHoldingRegister];
 extern UINT16_VAL MBInputRegister[maxInputRegister];
 extern UINT16_VAL MBCoils;
 extern UINT16_VAL MBDiscreteInputs;
+extern int rssi;
 
 void TareaEntradaDatos(void *Parametro)
 {
     uint32_t promedio1 = 0;
     uint32_t promedio2 = 0;
     uint32_t promedio3 = 0;
+    int8_t promedio4 = 0;
 
     uint32_t adc_value1 = adc1_get_raw(CH1);
     uint32_t adc_value2 = adc1_get_raw(CH2);
@@ -43,9 +45,10 @@ void TareaEntradaDatos(void *Parametro)
         MBInputRegister[0].Val = promedio1;
         MBInputRegister[1].Val = promedio2;
         MBInputRegister[2].Val = promedio3;
+        MBInputRegister[3].Val = rssi;
 
-        // printf("valor adc3 crudo: %d\n",adc_value3);
-        // printf("valor adc3 suave: %d\n",promedio3);
+        //printf("valor adc3 crudo: %d\n", adc_value3);
+        //printf("valor adc3 suave: %d\n", promedio3);
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
