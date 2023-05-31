@@ -1,6 +1,11 @@
 #include "modbus.h"
 #include "coils.h"
 
+#define bitRead(valor, bit) (((valor) >> (bit)) & 0x01)
+#define bitSet(valor, bit) ((valor |= (1UL << (bit))))
+#define bitClear(valor, bit) ((valor) &= ~(1UL << (bit)))
+#define bitWrite(valor, bit, bitvalue) ((bitvalue) ? bitSet(valor, bit) : bitClear(valor, bit))
+
 // uint8_t ByteArray[260]; // buffer de recepcion de los datos recibidos de los clientes
 UINT16_VAL MBHoldingRegister[maxHoldingRegister];
 UINT16_VAL MBInputRegister[maxInputRegister];
@@ -29,7 +34,17 @@ void modbusSerial(uint8_t *ByteArray, uint16_t Length)
             break;
 
         case MB_FC_READ_COILS: // 01 Read Coils
+            ByteArray[2] = 2;
 
+            ByteArray[3] = MBCoils.byte.LB;
+            ByteArray[4] = MBCoils.byte.HB;
+
+            CRC.Val = CRC16(ByteArray, 5);
+
+            ByteArray[5] = (CRC.byte.LB);
+            ByteArray[6] = (CRC.byte.HB);
+
+            uart_write_bytes(UART_NUM_0, (const char *)ByteArray, 8);
             break;
 
         case MB_FC_READ_DISCRETE_INPUTS: // funcion 02: Read Discrete Inputs
@@ -96,6 +111,7 @@ void modbusSerial(uint8_t *ByteArray, uint16_t Length)
             break;
 
         case MB_FC_WRITE_COIL: // 05 Write COIL
+           
             uart_write_bytes(UART_NUM_0, (const char *)ByteArray, 8);
 
             // direccion de coil
@@ -112,49 +128,62 @@ void modbusSerial(uint8_t *ByteArray, uint16_t Length)
 
             switch (Start.Val)
             {
-                // Dirección coil 0
+                // Dirección coil 1
             case 0:
                 // Comprueba si comando es ON
                 if (WordDataLength.Val == 0xFF00)
                 {
-                    gpio_set_level(C0, 1);
-                    MBCoils.bits.b0 = 1;
+                    bitWrite(MBCoils.Val, 0, 1);
                 }
                 // Si no comando OFF
                 else
                 {
-                    gpio_set_level(C0, 0);
-                    MBCoils.bits.b0 = 0;
-                }
-                break;
-
-                // Dirección coil 0
-
-            case 1:
-                if (WordDataLength.Val == 0xFF00)
-                {
-                    gpio_set_level(C1, 1);
-                    MBCoils.bits.b1 = 1;
-                }
-                else
-                {
-                    gpio_set_level(C1, 0);
-                    MBCoils.bits.b1 = 0;
+                    bitWrite(MBCoils.Val, 0, 0);
                 }
                 break;
 
                 // Dirección coil 2
 
-            case 2:
+            case 1:
+                // Comprueba si comando es ON
                 if (WordDataLength.Val == 0xFF00)
                 {
-                    gpio_set_level(C2, 1);
-                    MBCoils.bits.b2 = 1;
+                    bitWrite(MBCoils.Val, 1, 1);
                 }
+                // Si no comando OFF
                 else
                 {
-                    gpio_set_level(C2, 0);
-                    MBCoils.bits.b2 = 0;
+                    bitWrite(MBCoils.Val, 1, 0);
+                }
+                break;
+
+                // Dirección coil 3
+
+            case 2:
+                // Comprueba si comando es ON
+                if (WordDataLength.Val == 0xFF00)
+                {
+                    bitWrite(MBCoils.Val, 2, 1);
+                }
+                // Si no comando OFF
+                else
+                {
+                    bitWrite(MBCoils.Val, 2, 0);
+                }
+                break;
+
+                // Dirección coil 4
+
+            case 3:
+                // Comprueba si comando es ON
+                if (WordDataLength.Val == 0xFF00)
+                {
+                    bitWrite(MBCoils.Val, 3, 1);
+                }
+                // Si no comando OFF
+                else
+                {
+                    bitWrite(MBCoils.Val, 3, 0);
                 }
                 break;
 
