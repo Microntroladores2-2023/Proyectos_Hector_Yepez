@@ -1,0 +1,6 @@
+source "C:/Users/Hale/esp/esp-idf/components/bootloader/Kconfig.projbuild"
+source "C:/Users/Hale/esp/esp-idf/components/esp_app_format/Kconfig.projbuild"
+source "C:/Users/Hale/esp/esp-idf/components/esp_rom/Kconfig.projbuild"
+source "C:/Users/Hale/esp/esp-idf/components/esptool_py/Kconfig.projbuild"
+source "C:/Users/Hale/esp/esp-idf/components/partition_table/Kconfig.projbuild"
+source "C:/Users/Hale/Documents/Repo_Project_Micros2_Hector_yepez/Prueba_ESP_NOW/main/Kconfig.projbuild"
