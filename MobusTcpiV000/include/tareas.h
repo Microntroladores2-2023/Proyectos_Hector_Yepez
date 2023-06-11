@@ -1,0 +1,2 @@
+
+void TareaEntradaDatos(void *Parametro);
