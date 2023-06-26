@@ -11,7 +11,7 @@
     "idf.openOcdConfigs": [
         "board/esp32-wrover-kit-3.3v.cfg"
     ],
-    "idf.portWin": "COM4",
+    "idf.portWin": "COM5",
     "idf.pythonBinPathWin": "c:\\ESP32\\.espressif\\python_env\\idf5.0_py3.8_env\\Scripts\\python.exe",
     "idf.toolsPathWin": "c:\\ESP32\\.espressif",
     "idf.flashType": "UART"
