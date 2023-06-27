@@ -12,6 +12,5 @@ void init_adc()
     adc1_config_channel_atten(CH1, ADC_ATTEN_DB_11);
     adc1_config_channel_atten(CH2, ADC_ATTEN_DB_11);
     adc1_config_channel_atten(CH3, ADC_ATTEN_DB_11);
-    adc1_config_channel_atten(CH4, ADC_ATTEN_DB_11);
 
 }

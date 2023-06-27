@@ -2,10 +2,9 @@
 #include "esp_adc_cal.h"
 
 #define CH1 ADC1_CHANNEL_0
-#define CH2 ADC1_CHANNEL_5
+#define CH2 ADC1_CHANNEL_4
 #define CH3 ADC1_CHANNEL_7
-#define CH4 ADC1_CHANNEL_4
-//#define CH3 ADC1_CHANNEL_6
+
 
 #define NumeroMuestras 100
 
