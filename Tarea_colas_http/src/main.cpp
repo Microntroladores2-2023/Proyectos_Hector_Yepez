@@ -98,7 +98,7 @@ void EntradasFloat(void *pvParameters)
     Datos datosTx;
     datosTx.id = 1;
     datosTx.valuef = distancia;
-
+    Serial.println(distancia);
     xQueueSend(xQueue, &datosTx, portMAX_DELAY);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
@@ -132,7 +132,7 @@ void SendHTTP(void *pvParameters)
 
       String Trama = ScadaVemetris + "&rssi=" + WiFi.RSSI() + "&dato1=" + dato1 + "&dato2=" + dato2 + "&dato3=" + dato3 + "&dato4=" + dato4;
 
-      http.begin(Trama); // Iniciar conexión
+      http.begin(Trama);         // Iniciar conexión
       int httpCode = http.GET(); // Realizar petición
 
       if (httpCode > 0)
@@ -152,25 +152,6 @@ void SendHTTP(void *pvParameters)
   }
 }
 
-void setup()
-{
-  init_adc();
-  Serial.begin(115200);
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
-  initWiFi();
-  // Create the queue
-  xQueue = xQueueCreate(QUEUE_LENGTH, ITEM_SIZE);
-
-  if (xQueue != NULL)
-  {
-    xTaskCreatePinnedToCore(EntradasADC, "Entrada Datos ADC1", configMINIMAL_STACK_SIZE, NULL, 2, &xHandle_entrada_datos, 1);
-
-    xTaskCreatePinnedToCore(EntradasFloat, "Entrada de datos float", configMINIMAL_STACK_SIZE, NULL, 4, &xHandle_entrada_datos, 1);
-
-    xTaskCreatePinnedToCore(SendHTTP, "Envio de datos por HTTP", configMINIMAL_STACK_SIZE, NULL, 6, &xHandle_http_task, 1);
-  }
-}
-
 void initWiFi(void)
 {
 
@@ -183,6 +164,29 @@ void initWiFi(void)
   {
     vTaskDelay(500 / portTICK_PERIOD_MS);
     Serial.println("Configurando Red Wi-Fi");
+  }
+}
+
+void setup()
+{
+  init_adc();
+  Serial.begin(115200);
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+  initWiFi();
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+  // Create the queue
+  xQueue = xQueueCreate(QUEUE_LENGTH, ITEM_SIZE);
+
+  if (xQueue != NULL)
+  {
+    xTaskCreatePinnedToCore(EntradasADC, "Entrada Datos ADC1", configMINIMAL_STACK_SIZE, NULL, 2, &xHandle_entrada_datos, 1);
+
+    xTaskCreatePinnedToCore(EntradasFloat, "Entrada de datos float", configMINIMAL_STACK_SIZE, NULL, 4, &xHandle_entrada_datos, 1);
+
+    xTaskCreatePinnedToCore(SendHTTP, "Envio de datos por HTTP", configMINIMAL_STACK_SIZE, NULL, 6, &xHandle_http_task, 1);
+  }
+  else{
+    Serial.println("Tareas no creadas");
   }
 }
 
