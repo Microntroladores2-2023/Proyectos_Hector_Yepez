@@ -11,7 +11,7 @@
 #define ECHO_GPIO GPIO_NUM_25
 
 // Queue parameters
-#define QUEUE_LENGTH 7
+#define QUEUE_LENGTH 3
 #define ITEM_SIZE sizeof(Datos)
 
 // Queue handle
@@ -28,24 +28,20 @@ typedef struct
 TaskHandle_t xHandle_http_task = NULL;
 
 TaskHandle_t xHandle_entrada_datos1 = NULL;
+TaskHandle_t xHandle_entrada_datos2 = NULL;
 
-void EntradaDatos(void *pvParameters)
+uint32_t promedio1 = 0;
+uint32_t promedio2 = 0;
+uint32_t promedio3 = 0;
+float distance;
+
+void DatosADC(void *pvParameters)
 {
-  uint32_t promedio1 = 0;
-  uint32_t promedio2 = 0;
-  uint32_t promedio3 = 0;
 
   uint32_t adc_value1 = adc1_get_raw(CH1);
   uint32_t adc_value2 = adc1_get_raw(CH2);
   uint32_t adc_value3 = adc1_get_raw(CH3);
 
-  ultrasonic_sensor_t sensor = {
-      .trigger_pin = TRIGGER_GPIO,
-      .echo_pin = ECHO_GPIO};
-
-  ultrasonic_init(&sensor);
-
-  float distance;
   while (1)
   {
     // Iteración valores ADCs
@@ -71,16 +67,36 @@ void EntradaDatos(void *pvParameters)
       promedio2 = 4095;
     if (promedio3 > 4095)
       promedio3 = 4095;
-
     /*
         Serial.printf("promedio 3: ");
         Serial.println(promedio3);
-        Serial.printf("promedio 2: ");
-        Serial.println(promedio2);
-        Serial.printf("promedio 1: ");
-        Serial.println(promedio1);
-    */
+           Serial.printf("promedio 2: ");
+           Serial.println(promedio2);
+           Serial.printf("promedio 1: ");
+           Serial.println(promedio1);
+       */
 
+    Datos datosTx;
+    datosTx.valadc1 = promedio1;
+    datosTx.valadc2 = promedio2;
+    datosTx.valadc3 = promedio3;
+    datosTx.valuef = distance;
+
+    xQueueSend(xQueue, &datosTx, portMAX_DELAY);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+}
+
+void DatosFloat(void *pvParameters)
+{
+  ultrasonic_sensor_t sensor = {
+      .trigger_pin = TRIGGER_GPIO,
+      .echo_pin = ECHO_GPIO};
+
+  ultrasonic_init(&sensor);
+
+  while (1)
+  {
     esp_err_t res = ultrasonic_measure(&sensor, MAX_DISTANCE_CM, &distance);
     if (res != ESP_OK)
     {
@@ -100,6 +116,7 @@ void EntradaDatos(void *pvParameters)
         printf("%s\n", esp_err_to_name(res));
       }
     }
+    // else printf("Distance: %0.02f cm\n", distance * 100);
 
     Datos datosTx;
     datosTx.valadc1 = promedio1;
@@ -108,52 +125,11 @@ void EntradaDatos(void *pvParameters)
     datosTx.valuef = distance;
 
     xQueueSend(xQueue, &datosTx, portMAX_DELAY);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-  }
-}
-/*
-void EntradasFloat(void *pvParameters)
-{
-  ultrasonic_sensor_t sensor = {
-      .trigger_pin = TRIGGER_GPIO,
-      .echo_pin = ECHO_GPIO};
-
-  ultrasonic_init(&sensor);
-
-  while (1)
-  {
-    float distance;
-    esp_err_t res = ultrasonic_measure(&sensor, MAX_DISTANCE_CM, &distance);
-    if (res != ESP_OK)
-        {
-          printf("Error %d: ", res);
-          switch (res)
-          {
-          case ESP_ERR_ULTRASONIC_PING:
-            printf("Cannot ping (device is in invalid state)\n");
-            break;
-          case ESP_ERR_ULTRASONIC_PING_TIMEOUT:
-            printf("Ping timeout (no device found)\n");
-            break;
-          case ESP_ERR_ULTRASONIC_ECHO_TIMEOUT:
-            printf("Echo timeout (i.e. distance too big)\n");
-            break;
-          default:
-            printf("%s\n", esp_err_to_name(res));
-          }
-        }
-        //else printf("Distance: %0.04f cm\n", distance * 100);
-
-    Datos datosTx;
-    datosTx.id = 1;
-    datosTx.valuef = distance;
-
-    xQueueSend(xQueue, &datosTx, portMAX_DELAY);
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
-*/
+
 void SendHTTP(void *pvParameters)
 {
   // int32_t receivedItem;
@@ -178,6 +154,9 @@ void SendHTTP(void *pvParameters)
 
       String dato4 = String(datosRx.valuef);
 
+      printf("Distance: %s m\n", dato4);
+      printf("Promedio3: %s \n", dato3);
+
       String Trama = ScadaVemetris + "&rssi=" + WiFi.RSSI() + "&dato1=" + dato1 + "&dato2=" + dato2 + "&dato3=" + dato3 + "&dato4=" + dato4;
 
       http.begin(Trama);         // Iniciar conexión
@@ -195,7 +174,7 @@ void SendHTTP(void *pvParameters)
       }
       http.end(); // Se libera el cliente
 
-      vTaskDelay(5000 / portTICK_PERIOD_MS);
+      vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
   }
 }
@@ -226,9 +205,11 @@ void setup()
 
   if (xQueue != NULL)
   {
-    xTaskCreatePinnedToCore(EntradaDatos, "Entrada Datos ADC1", 1024 * 4, NULL, 2, &xHandle_entrada_datos1, 0);
+    xTaskCreatePinnedToCore(DatosADC, "Entrada Datos ADC1", 1024 * 4, NULL, 1, &xHandle_entrada_datos1, 1);
 
-    xTaskCreatePinnedToCore(SendHTTP, "Envio de datos por HTTP", 1024 * 2, NULL, 6, &xHandle_http_task, 0);
+    xTaskCreatePinnedToCore(DatosFloat, "Entrada Datos ultrasonido", 1024 * 4, NULL, 1, &xHandle_entrada_datos2, 1);
+
+    xTaskCreatePinnedToCore(SendHTTP, "Envio de datos por HTTP", 1024 * 4, NULL, 2, &xHandle_http_task, 0);
   }
   else
   {

@@ -1,3 +1,3 @@
 void SendHTTP(void* pvParameters);
-void EntradasADC(void* pvParameters);
-void EntradaFloat(void* pvParameters);
+void DatosADC(void *pvParameters);
+void DatosFloat(void* pvParameters);
