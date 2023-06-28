@@ -6,6 +6,6 @@
 #define CH3 ADC1_CHANNEL_7
 
 
-#define NumeroMuestras 100
+#define NumeroMuestras 60
 
 void init_adc();

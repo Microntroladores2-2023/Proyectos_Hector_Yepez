@@ -3,17 +3,22 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include "freertos/queue.h"
+#include "ultrasonic.h"
+
+#define MAX_DISTANCE_CM 500 // 5m max
+
+#define TRIGGER_GPIO GPIO_NUM_33
+#define ECHO_GPIO GPIO_NUM_25
 
 // Queue parameters
-#define QUEUE_LENGTH 5
+#define QUEUE_LENGTH 7
 #define ITEM_SIZE sizeof(Datos)
-#define SENSOR_GPIO GPIO_NUM_33
+
 // Queue handle
 QueueHandle_t xQueue;
 
 typedef struct
 {
-  int id;
   float valuef;
   uint32_t valadc1;
   uint32_t valadc2;
@@ -21,9 +26,10 @@ typedef struct
 } Datos;
 
 TaskHandle_t xHandle_http_task = NULL;
-TaskHandle_t xHandle_entrada_datos = NULL;
 
-void EntradasADC(void *pvParameters)
+TaskHandle_t xHandle_entrada_datos1 = NULL;
+
+void EntradaDatos(void *pvParameters)
 {
   uint32_t promedio1 = 0;
   uint32_t promedio2 = 0;
@@ -33,6 +39,13 @@ void EntradasADC(void *pvParameters)
   uint32_t adc_value2 = adc1_get_raw(CH2);
   uint32_t adc_value3 = adc1_get_raw(CH3);
 
+  ultrasonic_sensor_t sensor = {
+      .trigger_pin = TRIGGER_GPIO,
+      .echo_pin = ECHO_GPIO};
+
+  ultrasonic_init(&sensor);
+
+  float distance;
   while (1)
   {
     // Iteración valores ADCs
@@ -43,6 +56,9 @@ void EntradasADC(void *pvParameters)
       promedio2 += adc_value2 = adc1_get_raw(CH2);
       promedio3 += adc_value3 = adc1_get_raw(CH3);
     }
+
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+
     // Calculo Promedio de 100 muestras
     promedio1 /= NumeroMuestras;
     promedio2 /= NumeroMuestras;
@@ -56,56 +72,88 @@ void EntradasADC(void *pvParameters)
     if (promedio3 > 4095)
       promedio3 = 4095;
 
+    /*
+        Serial.printf("promedio 3: ");
+        Serial.println(promedio3);
+        Serial.printf("promedio 2: ");
+        Serial.println(promedio2);
+        Serial.printf("promedio 1: ");
+        Serial.println(promedio1);
+    */
+
+    esp_err_t res = ultrasonic_measure(&sensor, MAX_DISTANCE_CM, &distance);
+    if (res != ESP_OK)
+    {
+      printf("Error %d: ", res);
+      switch (res)
+      {
+      case ESP_ERR_ULTRASONIC_PING:
+        printf("Cannot ping (device is in invalid state)\n");
+        break;
+      case ESP_ERR_ULTRASONIC_PING_TIMEOUT:
+        printf("Ping timeout (no device found)\n");
+        break;
+      case ESP_ERR_ULTRASONIC_ECHO_TIMEOUT:
+        printf("Echo timeout (i.e. distance too big)\n");
+        break;
+      default:
+        printf("%s\n", esp_err_to_name(res));
+      }
+    }
+
     Datos datosTx;
-    datosTx.id = 1;
     datosTx.valadc1 = promedio1;
     datosTx.valadc2 = promedio2;
     datosTx.valadc3 = promedio3;
+    datosTx.valuef = distance;
 
     xQueueSend(xQueue, &datosTx, portMAX_DELAY);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
-
+/*
 void EntradasFloat(void *pvParameters)
 {
-  gpio_reset_pin(SENSOR_GPIO);
-  gpio_set_direction(SENSOR_GPIO, GPIO_MODE_INPUT_OUTPUT);
+  ultrasonic_sensor_t sensor = {
+      .trigger_pin = TRIGGER_GPIO,
+      .echo_pin = ECHO_GPIO};
+
+  ultrasonic_init(&sensor);
+
   while (1)
   {
-    gpio_set_level(SENSOR_GPIO, 0);
-    ets_delay_us(2);
-    gpio_set_level(SENSOR_GPIO, 1);
-    ets_delay_us(10);
-    gpio_set_level(SENSOR_GPIO, 1);
-
-    // Espera a que el eco del sensor sea detectado
-    uint32_t tiempo_inicio = 0;
-    uint32_t tiempo_final = 0;
-
-    while (gpio_get_level(SENSOR_GPIO) == 0)
-    {
-      tiempo_inicio = esp_timer_get_time();
-    }
-    while (gpio_get_level(SENSOR_GPIO) == 1)
-    {
-      tiempo_final = esp_timer_get_time();
-    }
-    // Calcular la distancia en centímetros
-    uint32_t duracion = tiempo_final - tiempo_inicio;
-    float distancia = duracion * 0.034 / 2;
+    float distance;
+    esp_err_t res = ultrasonic_measure(&sensor, MAX_DISTANCE_CM, &distance);
+    if (res != ESP_OK)
+        {
+          printf("Error %d: ", res);
+          switch (res)
+          {
+          case ESP_ERR_ULTRASONIC_PING:
+            printf("Cannot ping (device is in invalid state)\n");
+            break;
+          case ESP_ERR_ULTRASONIC_PING_TIMEOUT:
+            printf("Ping timeout (no device found)\n");
+            break;
+          case ESP_ERR_ULTRASONIC_ECHO_TIMEOUT:
+            printf("Echo timeout (i.e. distance too big)\n");
+            break;
+          default:
+            printf("%s\n", esp_err_to_name(res));
+          }
+        }
+        //else printf("Distance: %0.04f cm\n", distance * 100);
 
     Datos datosTx;
     datosTx.id = 1;
-    datosTx.valuef = distancia;
-    Serial.println(distancia);
+    datosTx.valuef = distance;
+
     xQueueSend(xQueue, &datosTx, portMAX_DELAY);
+
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
-
-  esp_timer_get_time();
 }
-
+*/
 void SendHTTP(void *pvParameters)
 {
   // int32_t receivedItem;
@@ -173,19 +221,17 @@ void setup()
   Serial.begin(115200);
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   initWiFi();
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
-  // Create the queue
+  //  Create the queue
   xQueue = xQueueCreate(QUEUE_LENGTH, ITEM_SIZE);
 
   if (xQueue != NULL)
   {
-    xTaskCreatePinnedToCore(EntradasADC, "Entrada Datos ADC1", configMINIMAL_STACK_SIZE, NULL, 2, &xHandle_entrada_datos, 1);
+    xTaskCreatePinnedToCore(EntradaDatos, "Entrada Datos ADC1", 1024 * 4, NULL, 2, &xHandle_entrada_datos1, 0);
 
-    xTaskCreatePinnedToCore(EntradasFloat, "Entrada de datos float", configMINIMAL_STACK_SIZE, NULL, 4, &xHandle_entrada_datos, 1);
-
-    xTaskCreatePinnedToCore(SendHTTP, "Envio de datos por HTTP", configMINIMAL_STACK_SIZE, NULL, 6, &xHandle_http_task, 1);
+    xTaskCreatePinnedToCore(SendHTTP, "Envio de datos por HTTP", 1024 * 2, NULL, 6, &xHandle_http_task, 0);
   }
-  else{
+  else
+  {
     Serial.println("Tareas no creadas");
   }
 }
