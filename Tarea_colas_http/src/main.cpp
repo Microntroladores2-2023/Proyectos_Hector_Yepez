@@ -11,7 +11,7 @@
 #define ECHO_GPIO GPIO_NUM_25
 
 // Queue parameters
-#define QUEUE_LENGTH 3
+#define QUEUE_LENGTH 2
 #define ITEM_SIZE sizeof(Datos)
 
 // Queue handle
@@ -34,6 +34,7 @@ uint32_t promedio1 = 0;
 uint32_t promedio2 = 0;
 uint32_t promedio3 = 0;
 float distance;
+Datos datosTx;
 
 void DatosADC(void *pvParameters)
 {
@@ -76,11 +77,9 @@ void DatosADC(void *pvParameters)
            Serial.println(promedio1);
        */
 
-    Datos datosTx;
     datosTx.valadc1 = promedio1;
     datosTx.valadc2 = promedio2;
     datosTx.valadc3 = promedio3;
-    datosTx.valuef = distance;
 
     xQueueSend(xQueue, &datosTx, portMAX_DELAY);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -118,10 +117,6 @@ void DatosFloat(void *pvParameters)
     }
     // else printf("Distance: %0.02f cm\n", distance * 100);
 
-    Datos datosTx;
-    datosTx.valadc1 = promedio1;
-    datosTx.valadc2 = promedio2;
-    datosTx.valadc3 = promedio3;
     datosTx.valuef = distance;
 
     xQueueSend(xQueue, &datosTx, portMAX_DELAY);
